@@ -432,25 +432,25 @@ Setting `pad_token_id` to `eos_token_id`:2 for open-end generation.
 Assistant: ✅ The Tosibox 175's technical specifications include dimensions of 94 x 62 x 30 mm (W x H x D), weight of 80 g, and an operating temperature range from -20 °C to +65 °C (-4 °F to 149 °F). It operates on the frequency bands FDD B1 / B3 / B5 / B8 / B20 / B28 at 1–2 GHz, as well as TDD B38 / B40 / B41 at 2–2.5 GHz. Modem speed is up to 150 Mbps downlink and
 User: can we still get phishing emails even if we use tosibox locks
 
-Setting pad_token_id to eos_token_id:2 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:2 for open-end generation.
 
 
 Assistant: ✅ Yes, phishing emails can still reach users even when Tosibox Locks are in place. Tosibox focuses on network-level security, such as VPN tunneling and device authentication. However, phishing attacks typically target human behaviour via email and social engineering. Therefore, user training and email filtering solutions are still essential alongside Tosibox infrastructure.
 User: how to set up a firewall in general
 
-Setting pad_token_id to eos_token_id:2 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:2 for open-end generation.
 
 
 Assistant: ✅ To set up a basic firewall, follow these steps: Enable the firewall (e.g., ufw enable on Ubuntu or using a router interface). Define default rules: typically, deny all incoming and allow all outgoing. Add specific allow rules (e.g., allow port 22 for SSH or 443 for HTTPS). Regularly monitor and update rules based on services used. Log and audit suspicious traffic for ongoing protection. Always test the configuration to ensure essential services remain accessible.
 User: what are the key signs of a phishing email
 
-Setting pad_token_id to eos_token_id:2 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:2 for open-end generation.
 
 
 Assistant: ✅ Common signs of a phishing email include: Urgent or threatening language demanding immediate action. Suspicious sender address or display name. Links that lead to unexpected domains (always hover to check). Generic greetings like "Dear user" instead of your name. Unexpected attachments or requests for sensitive information like passwords or PINs. Always verify the sender and avoid clicking links unless you're sure they're legitimate.
 User: are phishing emails always from unknown senders
 
-Setting pad_token_id to eos_token_id:2 for open-end generation.
+Setting `pad_token_id` to `eos_token_id`:2 for open-end generation.
 
 
 Assistant: ❌ No, phishing emails are not always from unknown senders. Attackers often use spoofed addresses or compromise legitimate email accounts to make their messages appear trustworthy. Always verify requests for sensitive actions—even if they come from someone you know.
