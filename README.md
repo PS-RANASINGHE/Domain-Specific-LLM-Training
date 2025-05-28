@@ -1,8 +1,9 @@
 # Domain-Specific-LLM-Training
 
 
-#### Note - Saved model can be reveiwed from https://huggingface.co/sesanaa/mistral-journal-finetune 
+#### Note - Saved model can be reveiwed from https://huggingface.co/sesanaa/mistral-journal-finetune (This link may not be accessed to as it is set private to general public)
 
+![image](https://github.com/user-attachments/assets/08005696-46e4-42aa-8685-6cb5872b386b)
 
 
 In this project I have used Mistral AI 7B as the base model and a dataset that is used to finetune.
