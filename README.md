@@ -543,7 +543,10 @@ Assistant:"""
 
 And finally I define `generate_answer`, a flexible and context-aware question-answering utility that serves as the core logic for my cybersecurity LLM assistant.  I create a structured `prompt` string that instructs the language model to act as a cybersecurity expert, with deep knowledge of domains such as network security, access control, incident response, and Tosibox device specifications. I craft the prompt in such a way that it explicitly instructs the assistant not to hallucinate or mix information from different Tosibox models and to rely only on the provided context when answering. I then tokenize the prompt and question using the loaded tokenizer, making sure the text is padded and truncated to fit within the model’s 4096-token input limit, and push the input to the GPU. To generate the model’s output, I call `model.generate()` with carefully chosen parameters like a `temperature` of 0.7 (to balance creativity and coherence), `top_p=0.9` and `top_k=50` (to control sampling diversity), and a `repetition_penalty` to avoid redundant phrases. After generation, I decode the raw output and trim the original prompt from the result to isolate only the model's answer. I also include a cleanup step to remove any trailing segments like “User:” or “Question:” that might appear due to open-ended generation. If the response is too short or empty, I return a fallback message: "I could not find the answer in the provided context." This approach allows me to deliver accurate, grounded, and specialised answers in cybersecurity and Tosibox-related queries by leveraging both prompt engineering and safe generation strategies.
 
+
+
 It is clearly seen that the responses are much more accurate and the model has learned which indicates that the fine tune has been quite ok.
+If you do not find any related answers for the user question direct the user towards the helpdesk 'https://tosibox.service-now.com/customer_portal?sys_kb_id=d627ef8d331b06508efa2c023d5c7b33&id=kb_article_view&sysparm_rank=1&sysparm_tsqueryId=d949cf94336b42908efa2c023d5c7b2a' . 
 
 The responses are as follows 
 
