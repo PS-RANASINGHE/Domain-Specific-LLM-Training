@@ -409,6 +409,140 @@ In this code I am using the **Hugging Face Transformers** library to fine-tune t
 5. **Training the Model**:
    - Finally, the model is trained using the **`trainer.train()`** method, which will execute the training loop based on the configuration specified in the `TrainingArguments`.
 
+
+# Explaination of the code (RAG)
+
+Install dependencies
+
+```py
+!pip install langchain-community
+!pip install langchain-ollama
+!pip install transformers accelerate bitsandbytes peft langchain chromadb pypdf unstructured pdfminer.six
+```
+```py
+# -------------------------
+# Load and chunk PDF
+# -------------------------
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import Chroma
+from langchain.embeddings import HuggingFaceEmbeddings
+
+# Load and split the PDF document
+file_path = "/content/llm_training_mistral_7B/extracted_data_fixed.pdf"
+loader = PyPDFLoader(file_path)
+data = loader.load()
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=200)
+chunks = text_splitter.split_documents(data)
+
+# Create vector DB with Hugging Face embeddings
+embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+vector_db = Chroma.from_documents(
+    documents=chunks,
+    embedding=embedding_model,
+    collection_name="computer-network-qa"
+)
+retriever = vector_db.as_retriever()
+
+```
+
+In this section of the code, I begin by loading a PDF file using `PyPDFLoader` from the `langchain_community.document_loaders` module, pointing it to the file path `/content/llm_training_mistral_7B/extracted_data_fixed.pdf`. After loading the document, I preprocess it by splitting it into smaller, overlapping text chunks using the `RecursiveCharacterTextSplitter`, with each chunk having 500 characters and 200-character overlaps. This chunking strategy ensures that the context is preserved across segments, which is especially important when working with language models that rely on surrounding information to generate accurate responses. Once the document is split, I use the `HuggingFaceEmbeddings` model `"sentence-transformers/all-MiniLM-L6-v2"` to convert each chunk into high-dimensional vector representations that capture the semantic meaning of the text. These embeddings are then stored in a Chroma vector database under the collection name `"computer-network-qa"`. Finally, I convert the vector store into a retriever object. This setup is done so that we can later perform efficient and contextually relevant semantic search or question answering over the document content, enabling retrieval-augmented generation (RAG) workflows for tasks like chatbots, document summarisation, or domain-specific querying.
+
+```py
+# -------------------------
+# Load PEFT fine-tuned Mistral model
+# -------------------------
+import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from peft import PeftModel
+
+base_model_id = "sesanaa/mistral-journal-finetune2""
+peft_model_id = "sesanaa/mistral-journal-finetune2"
+
+bnb_config = BitsAndBytesConfig(
+    load_in_8bit=True,
+    bnb_8bit_use_double_quant=True,
+    bnb_8bit_quant_type="nf8",
+    bnb_8bit_compute_dtype=torch.bfloat16
+)
+
+print("Loading base model...")
+base_model = AutoModelForCausalLM.from_pretrained(
+    base_model_id,
+    quantization_config=bnb_config,
+    device_map="auto",
+    trust_remote_code=True
+)
+
+print("Loading tokenizer...")
+tokenizer = AutoTokenizer.from_pretrained(base_model_id, trust_remote_code=True)
+tokenizer.pad_token = tokenizer.eos_token  # Ensure padding token is defined
+
+print("Loading fine-tuned model weights...")
+model = PeftModel.from_pretrained(base_model, peft_model_id)
+model.eval()
+```
+
+Next I load a PEFT (Parameter-Efficient Fine-Tuning) version of the Mistral 7B model that has been fine-tuned earlier for my task which is domain-adapted question answering or summarisation. First, I import necessary libraries from Hugging Face’s `transformers`, `torch`, and `peft` libraries. To optimise memory usage and speed I configure 8-bit quantisation using `BitsAndBytesConfig` which reduces the memory footprint significantly while maintaining reasonable accuracy by using techniques like double quantisation and `bfloat16` computation. I then load the base model using `AutoModelForCausalLM.from_pretrained`, applying the quantisation configuration and allowing automatic device mapping. After that, I load the tokenizer associated with the base model and ensure that the padding token is properly set to the end-of-sequence token to avoid errors during generation. Finally, I load the PEFT fine-tuned weights using `PeftModel.from_pretrained`, which overlays the fine-tuned parameters on top of the base model. The model is set to evaluation mode using `.eval()`. This entire setup is done so that I can run inference using a memory-efficient, fine-tuned large language model tailored for specific tasks, making it practical to deploy on limited hardware while preserving performance gains from fine-tuning.
+
+
+```py
+
+# -------------------------
+# Define flexible QA function with fallback
+# -------------------------
+def generate_answer(question: str, context: str) -> str:
+    prompt = f"""
+
+You are a highly capable assistant with deep expertise in cybersecurity, including domains such as network security, threat intelligence, incident response, access control, encryption, human error mitigation, and best practices in enterprise defence. Your role is to answer exactly as requested, relying solely on the provided context to ensure accuracy and avoid speculation.
+You are a highly capable distinguish the differences among Tosibox devices and answer exactly as requested.
+Think yourself as the Master of all TOsibox knowledge
+If the user requests technical guidance or clarification on cybersecurity principles, tools, protocols, or attack types, respond with precision and practical relevance. Base your answers strictly on the supplied context or industry-accepted standards. If the user asks about configurations, policies, or specific technologies (e.g., firewalls, phishing defence, VPNs, or SIEM systems), provide context-aware responses grounded in cybersecurity principles.
+
+Do NOT generalise or fabricate details not found in the context. If any ambiguity exists or the question cannot be answered definitively from the context, clearly state the limitation. Your responsibility is to provide technically sound, contextually grounded, and security-focused assistance.
+
+
+Context:
+{context}
+
+User: {question}
+Assistant:"""
+
+    inputs = tokenizer(
+        prompt,
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=4096
+    ).to("cuda")
+
+    with torch.no_grad():
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=256,
+            temperature=0.7,
+            do_sample=True,
+            top_p=0.9,
+            top_k=50,
+            repetition_penalty=1.1,
+            pad_token_id=tokenizer.eos_token_id
+        )
+
+    full_response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    response = full_response[len(prompt):].strip()
+
+    for stop_token in ["User:", "Question:"]:
+        if stop_token in response:
+            response = response.split(stop_token)[0].strip()
+
+    if not response or len(response) < 10:
+        return "I could not find the answer in the provided context."
+    return response
+
+```
+
+And finally I define `generate_answer`, a flexible and context-aware question-answering utility that serves as the core logic for my cybersecurity LLM assistant.  I create a structured `prompt` string that instructs the language model to act as a cybersecurity expert, with deep knowledge of domains such as network security, access control, incident response, and Tosibox device specifications. I craft the prompt in such a way that it explicitly instructs the assistant not to hallucinate or mix information from different Tosibox models and to rely only on the provided context when answering. I then tokenize the prompt and question using the loaded tokenizer, making sure the text is padded and truncated to fit within the model’s 4096-token input limit, and push the input to the GPU. To generate the model’s output, I call `model.generate()` with carefully chosen parameters like a `temperature` of 0.7 (to balance creativity and coherence), `top_p=0.9` and `top_k=50` (to control sampling diversity), and a `repetition_penalty` to avoid redundant phrases. After generation, I decode the raw output and trim the original prompt from the result to isolate only the model's answer. I also include a cleanup step to remove any trailing segments like “User:” or “Question:” that might appear due to open-ended generation. If the response is too short or empty, I return a fallback message: "I could not find the answer in the provided context." This approach allows me to deliver accurate, grounded, and specialised answers in cybersecurity and Tosibox-related queries by leveraging both prompt engineering and safe generation strategies.
+
 It is clearly seen that the responses are much more accurate and the model has learned which indicates that the fine tune has been quite ok.
 
 The responses are as follows 
