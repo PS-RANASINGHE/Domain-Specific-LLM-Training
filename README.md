@@ -5,6 +5,36 @@
 
 ![image](https://github.com/user-attachments/assets/08005696-46e4-42aa-8685-6cb5872b386b)
 
+First, data should be cleaned by removing repetitions to ensure the integrity and uniqueness of each JSON object. This is achieved by identifying duplicate entries within the JSONL file using a sorted string representation of each JSON object. By storing and comparing these representations, only unique data entries are preserved, resulting in a cleaned dataset suitable for further processing or model training.
+
+ This can be seen from the python code  used 
+
+```py
+import json
+
+def remove_duplicates_from_jsonl(file_path):
+    seen_contexts = set()
+    unique_lines = []
+
+    # Read and process lines
+    with open(file_path, 'r', encoding='utf-8') as infile:
+        for line in infile:
+            try:
+                data = json.loads(line)
+                # Convert the JSON object to a sorted string representation
+                context = json.dumps(data, sort_keys=True)
+                if context not in seen_contexts:
+                    seen_contexts.add(context)
+                    unique_lines.append(line)
+            except json.JSONDecodeError:
+                print("Skipping invalid JSON line:", line)
+
+    # Write unique lines back to the file
+    with open(file_path, 'w', encoding='utf-8') as outfile:
+        outfile.writelines(unique_lines)
+```
+
+
 
 In this project I have used Mistral AI 7B as the base model and a dataset that is used to finetune.
 
